@@ -44,12 +44,13 @@ button.primary:hover:not(:disabled),button.primary:active:not(:disabled){backgro
 @media(max-width:600px){.jnav{justify-content:flex-start;padding-right:80px}}.jadd{display:inline-flex;align-items:center;gap:6px}.jadd svg{width:16px;height:16px}
 .jghost{position:absolute;z-index:3;pointer-events:none;background-color:var(--bg)!important;overflow:hidden}
 /* INTRO: seed → rings → organic → tilt → trunk → mark (canvas + JS) */
-#intro{position:fixed;inset:0;z-index:999;background:#0c1410;cursor:pointer;transition:opacity .6s ease}
+#intro{position:fixed;inset:0;z-index:999;background:#fbfcf9;cursor:pointer;transition:opacity .6s ease}
 #intro.out{opacity:0;pointer-events:none}
 #introCanvas{position:absolute;inset:0;width:100%;height:100%}
 #intro .ibox{position:absolute;left:50%;top:50%;width:200px;transform:translate(-50%,-62%);display:flex;flex-direction:column;align-items:center;gap:20px;pointer-events:none}
 #intro .vmark{width:200px;height:auto;aspect-ratio:224/200;opacity:0}
-#intro .iword{font:700 44px/1 ui-sans-serif,system-ui,-apple-system,"SF Pro Display","Segoe UI",sans-serif;letter-spacing:-.01em;color:#b7efb2;white-space:nowrap}
+#intro .iword{font:700 44px/1 ui-sans-serif,system-ui,-apple-system,"SF Pro Display","Segoe UI",sans-serif;letter-spacing:-.01em;color:#1e5b30;white-space:nowrap}
+#intro .vmark path{fill:#1e5b30}
 #intro .iword span{display:inline-block;opacity:0;filter:blur(10px);transform:translateY(8px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),filter .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
 #intro .iword.on span{opacity:1;filter:blur(0);transform:none}
 #intro.static canvas{display:none}#intro.static .vmark{opacity:1}#intro.static .iword span{opacity:1;filter:none;transform:none;transition:none}
@@ -155,7 +156,7 @@ word.querySelectorAll('span').forEach((sp,i)=>sp.style.transitionDelay=(i*.06)+'
 let done=false,raf=0;const end=()=>{if(done)return;done=true;cancelAnimationFrame(raf);el.classList.add('out');setTimeout(()=>el.remove(),650)};
 el.addEventListener('click',end);el.addEventListener('touchstart',end,{passive:true});addEventListener('keydown',end,{once:true});
 if(stat){el.classList.add('static');setTimeout(end,1400);return}
-const cv=$('#introCanvas'),cx=cv.getContext('2d'),G='#b7efb2',BG='#0c1410';let W=0,H=0;
+const cv=$('#introCanvas'),cx=cv.getContext('2d'),G='#1e5b30',BG='#fbfcf9',RIM='#123d20';let W=0,H=0;
 const size=()=>{const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0)};size();addEventListener('resize',size);
 const cl=x=>x<0?0:x>1?1:x,seg=(t,a,b)=>cl((t-a)/(b-a)),eo=x=>1-Math.pow(1-x,3),eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2,back=x=>{const c=1.5;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2)},L=(a,b,t)=>a+(b-a)*t;
 // Final mark outlines (mark units), sampled from the traced logo: each band has an outer and inner edge, tip→base.
@@ -164,25 +165,34 @@ const MK={"Lin":{"o":[[18.25,51.5],[18.0,53.6],[18.0,55.81],[18.25,57.91],[18.5,
 const bands=[[1,-1,'Larm'],[1,1,'Rarm'],[2,-1,'Lin'],[2,1,'Rin'],[3,-1,'Lout'],[3,1,'Rout']],RR=[0,30,54,78];
 const ph=[0,1,2,3].map(()=>[Math.random()*6.28,Math.random()*6.28,Math.random()*6.28]);
 const wob=(i,a,amt)=>1+amt*(.05*Math.sin(3*a+ph[i][0])+.035*Math.sin(5*a+ph[i][1])+.02*Math.sin(8*a+ph[i][2]));
-const buf=new Float32Array(4*P);
-function bandPt(ring,side,edge,k,g,org,flat,morph,key){const sN=k/(P-1),r=RR[ring]*g,rho=Math.max(0,r+edge*BW/2*Math.min(1,g*3)),th=(-90+side*180*sN)*Math.PI/180;
- // stage 2–3: top-down organic ring half
- const w3=wob(ring,th,org);let x=CX+Math.cos(th)*rho*w3,y=CY+Math.sin(th)*rho*w3;
- if(flat>0){let x5,y5;if(sN<=.5){const w5=wob(ring,th,org*.3);x5=CX+Math.cos(th)*rho*w5;y5=CY+Math.sin(th)*rho*w5}else{const u=(sN-.5)*2;if(ring===1){x5=CX+side*rho*(1-u);y5=CY+u*rho*.55}else{x5=CX+side*rho;y5=CY+u*(BOT-CY)}}x=L(x,x5,flat);y=L(y,y5,flat)}
+const sm=x=>x*x*(3-2*x);
+// one point of a ring half-band through the storyboard states: 02 circle → 03 wobble → 04 tilted ellipse → 05 mushroom → 06 mark
+function bandPt(ring,side,edge,k,g,org,tilt,flat,morph,key){const sN=k/(P-1),r=RR[ring]*g,rho=Math.max(0,r+edge*BW/2*Math.min(1,g*3)),th=(-90+side*180*sN)*Math.PI/180;
+ const w=wob(ring,th,org*(1-flat*.7));let x=CX+Math.cos(th)*rho*w*(1+.35*tilt),y=CY+Math.sin(th)*rho*w*(1-.68*tilt);
+ if(flat>0){let x5,y5;const R=rho*1.18;if(sN<=.5){x5=CX+Math.cos(th)*R*w;y5=CY+Math.sin(th)*rho*.5*w}else{const u=(sN-.5)*2;
+   if(ring===1){x5=CX+side*R*(1-sm(cl(u*1.4)));y5=CY+u*rho*.75}else{const nx=rho*.62;x5=CX+side*(R-(R-nx)*sm(cl(u/.32)));y5=CY+u*(BOT+14-CY)}}x=L(x,x5,flat);y=L(y,y5,flat)}
  if(morph>0){const f=MK[key][edge>0?'o':'i'][k];x=L(x,f[0],morph);y=L(y,f[1],morph)}return[x,y]}
-const T0=performance.now(),DUR=4900;let swapped=false;
+const T0=performance.now(),DUR=5200;let swapped=false;
 function frame(now){const t=(now-T0)/1000;cx.fillStyle=BG;cx.fillRect(0,0,W,H);
  const mr=mark.getBoundingClientRect(),k=mr.width/224,X=x=>mr.left+(x+2)*k,Y=y=>mr.top+(y+2)*k;
- const org=eio(seg(t,1.45,2.05)),flat=eio(seg(t,2.05,2.85));
- if(t<4.0){cx.fillStyle=G;cx.strokeStyle=G;cx.lineWidth=.8;cx.lineJoin="round";
-  for(const [ring,side,key] of bands){const g=eo(seg(t,.45+ring*.24,1.0+ring*.24)),morph=eio(seg(t,2.85+(3-ring)*.12,3.6+(3-ring)*.12));if(g<=0)continue;cx.beginPath();
-   for(let i=0;i<P;i++){const [x,y]=bandPt(ring,side,1,i,g,org,flat,morph,key);i?cx.lineTo(X(x),Y(y)):cx.moveTo(X(x),Y(y))}
-   for(let i=P-1;i>=0;i--){const [x,y]=bandPt(ring,side,-1,i,g,org,flat,morph,key);cx.lineTo(X(x),Y(y))}cx.closePath();cx.fill();cx.stroke()}
-  // seed → leaves (same closed outline, morphs in place)
-  const sg=back(seg(t,.05,.55)),lm=eio(seg(t,3.2,3.95)),N=MK.leaves.length,sr=13*sg;cx.beginPath();
-  for(let i=0;i<N;i++){const a=Math.PI/2+i/(N-1)*Math.PI*2,f=MK.leaves[i],x=L(CX+Math.cos(a)*sr,f[0],lm),y=L(CY+Math.sin(a)*sr,f[1],lm);i?cx.lineTo(X(x),Y(y)):cx.moveTo(X(x),Y(y))}cx.closePath();cx.fill()}
+ const org=eio(seg(t,1.45,2.05)),tilt=eio(seg(t,2.05,2.6))*(1-eio(seg(t,2.75,3.35))),flat=eio(seg(t,2.75,3.35));
+ if(t<4.25){cx.strokeStyle=cx.fillStyle=G;cx.lineWidth=.8;cx.lineJoin='round';
+  const mph=ring=>eio(seg(t,3.5+(3-ring)*.1,4.0+(3-ring)*.1));
+  const draw=(ring,side,key,dy)=>{const g=eo(seg(t,.45+ring*.24,1.0+ring*.24)),m=mph(ring);if(g<=0)return;cx.beginPath();
+   for(let i=0;i<P;i++){const [x,y]=bandPt(ring,side,1,i,g,org,tilt,flat,m,key);i?cx.lineTo(X(x),Y(y+dy)):cx.moveTo(X(x),Y(y+dy))}
+   for(let i=P-1;i>=0;i--){const [x,y]=bandPt(ring,side,-1,i,g,org,tilt,flat,m,key);cx.lineTo(X(x),Y(y+dy))}cx.closePath();cx.fill();cx.stroke()};
+  // 04: thicker bottom rim — the outer ring repeated just below, in a deeper green
+  const rim=9*tilt;if(rim>.3){cx.strokeStyle=cx.fillStyle=RIM;for(let d=rim;d>0;d-=1.5){draw(3,-1,'Lout',d);draw(3,1,'Rout',d)}cx.strokeStyle=cx.fillStyle=G}
+  for(const [ring,side,key] of bands)draw(ring,side,key,0);
+  // seed: circle → squashed (04) → drop (05) → leaves (06)
+  const sg=back(seg(t,.05,.55)),lm=eio(seg(t,3.6,4.2)),N=MK.leaves.length,sr=13*sg;cx.beginPath();
+  for(let i=0;i<N;i++){const a=Math.PI/2+i/(N-1)*Math.PI*2,ca=Math.cos(a),sa=Math.sin(a);let x=CX+ca*sr*(1+.35*tilt),y=CY+sa*sr*(1-.68*tilt);
+   if(flat>0){const x5=CX+ca*sr*1.25*(sa>0?1-.85*sa:1),y5=CY-4+(sa>0?sa*sr*1.1:sa*sr*.45);x=L(x,x5,flat);y=L(y,y5,flat)}
+   const f=MK.leaves[i];x=L(x,f[0],lm);y=L(y,f[1],lm);i?cx.lineTo(X(x),Y(y)):cx.moveTo(X(x),Y(y))}cx.closePath();cx.fill();
+  // 05: trunk lines fade out at the bottom (storyboard), clears as they become the mark
+  const fd=flat*(1-mph(2));if(fd>0){const y0=Y(CY+(BOT-CY)*.55),y1=Y(BOT+16),gr=cx.createLinearGradient(0,y0,0,y1);gr.addColorStop(0,'rgba(251,252,249,0)');gr.addColorStop(1,`rgba(251,252,249,${fd})`);cx.fillStyle=gr;cx.fillRect(0,y0,W,y1-y0+2)}}
  else if(!swapped){swapped=true;mark.style.opacity=1;cx.fillStyle=BG;cx.fillRect(0,0,W,H)}
- if(t>4.0&&!word.classList.contains('on'))word.classList.add('on');
+ if(t>4.25&&!word.classList.contains('on'))word.classList.add('on');
  if(t*1000>=DUR){end();return}raf=requestAnimationFrame(frame)}
 raf=requestAnimationFrame(frame)})();
 function hideOverlays(){const wasDrawer=!$('#drawer').classList.contains('hidden');$('#drawer').classList.add('hidden');$('#captureMenu').classList.add('hidden');$('#scrim').classList.add('hidden');$('#plusBtn').classList.remove('open');$('#plusBtn').setAttribute('aria-expanded','false');$('#menuBtn').setAttribute('aria-expanded','false');if(wasDrawer)$('#menuBtn').focus()}
